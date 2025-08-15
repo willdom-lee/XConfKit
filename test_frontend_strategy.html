@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>策略创建测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 8px; margin-bottom: 10px; }
+        button { padding: 10px 20px; background: #1890ff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #40a9ff; }
+        .result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+        .success { background: #f6ffed; border-color: #b7eb8f; }
+        .error { background: #fff2f0; border-color: #ffccc7; }
+    </style>
+</head>
+<body>
+    <h1>策略创建测试</h1>
+    
+    <form id="strategyForm">
+        <div class="form-group">
+            <label for="name">策略名称:</label>
+            <input type="text" id="name" name="name" value="测试策略" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">策略描述:</label>
+            <input type="text" id="description" name="description" value="这是一个测试策略">
+        </div>
+        
+        <div class="form-group">
+            <label for="device_id">设备ID:</label>
+            <input type="number" id="device_id" name="device_id" value="1" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="backup_type">备份类型:</label>
+            <select id="backup_type" name="backup_type" required>
+                <option value="running-config">运行配置</option>
+                <option value="startup-config">启动配置</option>
+                <option value="ip-route">路由表</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="strategy_type">策略类型:</label>
+            <select id="strategy_type" name="strategy_type" required>
+                <option value="one-time">一次性策略</option>
+                <option value="recurring">周期性策略</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="scheduled_time">计划执行时间:</label>
+            <input type="datetime-local" id="scheduled_time" name="scheduled_time" required>
+        </div>
+        
+        <button type="submit">创建策略</button>
+    </form>
+    
+    <div id="result" class="result" style="display: none;"></div>
+    
+    <script>
+        // 设置默认时间（1小时后）
+        const now = new Date();
+        now.setHours(now.getHours() + 1);
+        document.getElementById('scheduled_time').value = now.toISOString().slice(0, 16);
+        
+        document.getElementById('strategyForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                device_id: parseInt(formData.get('device_id')),
+                backup_type: formData.get('backup_type'),
+                strategy_type: formData.get('strategy_type'),
+                scheduled_time: new Date(formData.get('scheduled_time')).toISOString()
+            };
+            
+            console.log('发送数据:', data);
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/strategies/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                console.log('响应:', result);
+                
+                const resultDiv = document.getElementById('result');
+                resultDiv.style.display = 'block';
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ 策略创建成功</h3>
+                        <p><strong>策略ID:</strong> ${result.id}</p>
+                        <p><strong>策略名称:</strong> ${result.name}</p>
+                        <p><strong>创建时间:</strong> ${result.created_at}</p>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ 策略创建失败</h3>
+                        <p><strong>状态码:</strong> ${response.status}</p>
+                        <p><strong>错误信息:</strong> ${result.detail || result.message || '未知错误'}</p>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                console.error('请求失败:', error);
+                const resultDiv = document.getElementById('result');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ 请求失败</h3>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

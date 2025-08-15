@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端API测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin-bottom: 30px; padding: 15px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; margin: 5px; background: #1890ff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #40a9ff; }
+        .result { margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f5f5f5; }
+        .success { background: #f6ffed; border-color: #b7eb8f; }
+        .error { background: #fff2f0; border-color: #ffccc7; }
+    </style>
+</head>
+<body>
+    <h1>前端API测试</h1>
+    
+    <div class="test-section">
+        <h3>1. 测试设备API</h3>
+        <button onclick="testDevices()">获取设备列表</button>
+        <div id="devicesResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. 测试策略API</h3>
+        <button onclick="testStrategies()">获取策略列表</button>
+        <div id="strategiesResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. 测试策略创建</h3>
+        <button onclick="testCreateStrategy()">创建测试策略</button>
+        <div id="createResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. 测试直接后端API</h3>
+        <button onclick="testDirectBackend()">直接调用后端</button>
+        <div id="directResult" class="result"></div>
+    </div>
+    
+    <script>
+        function showResult(elementId, success, message, data = null) {
+            const element = document.getElementById(elementId);
+            element.className = `result ${success ? 'success' : 'error'}`;
+            element.innerHTML = `
+                <h4>${success ? '✅ 成功' : '❌ 失败'}</h4>
+                <p><strong>消息:</strong> ${message}</p>
+                ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+            `;
+        }
+        
+        async function testDevices() {
+            try {
+                console.log('测试设备API...');
+                const response = await fetch('/api/devices/');
+                console.log('设备API响应:', response);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('设备数据:', data);
+                    showResult('devicesResult', true, `获取到 ${data.length} 个设备`, data);
+                } else {
+                    showResult('devicesResult', false, `HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('设备API错误:', error);
+                showResult('devicesResult', false, `网络错误: ${error.message}`);
+            }
+        }
+        
+        async function testStrategies() {
+            try {
+                console.log('测试策略API...');
+                const response = await fetch('/api/strategies/');
+                console.log('策略API响应:', response);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('策略数据:', data);
+                    showResult('strategiesResult', true, `获取到 ${data.length} 个策略`, data);
+                } else {
+                    showResult('strategiesResult', false, `HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('策略API错误:', error);
+                showResult('strategiesResult', false, `网络错误: ${error.message}`);
+            }
+        }
+        
+        async function testCreateStrategy() {
+            try {
+                console.log('测试策略创建...');
+                
+                const strategyData = {
+                    name: "前端测试策略",
+                    description: "这是一个前端测试策略",
+                    device_id: 1,
+                    backup_type: "running-config",
+                    strategy_type: "one-time",
+                    scheduled_time: new Date(Date.now() + 3600000).toISOString() // 1小时后
+                };
+                
+                console.log('发送数据:', strategyData);
+                
+                const response = await fetch('/api/strategies/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(strategyData)
+                });
+                
+                console.log('创建策略响应:', response);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('创建成功:', data);
+                    showResult('createResult', true, '策略创建成功', data);
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: '未知错误' }));
+                    console.error('创建失败:', errorData);
+                    showResult('createResult', false, `创建失败: ${errorData.detail || response.statusText}`);
+                }
+            } catch (error) {
+                console.error('策略创建错误:', error);
+                showResult('createResult', false, `网络错误: ${error.message}`);
+            }
+        }
+        
+        async function testDirectBackend() {
+            try {
+                console.log('测试直接后端API...');
+                const response = await fetch('http://localhost:8000/api/strategies/');
+                console.log('直接后端响应:', response);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('直接后端数据:', data);
+                    showResult('directResult', true, '直接后端API正常', data);
+                } else {
+                    showResult('directResult', false, `直接后端失败: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('直接后端错误:', error);
+                showResult('directResult', false, `直接后端网络错误: ${error.message}`);
+            }
+        }
+        
+        // 页面加载时自动测试设备API
+        window.onload = function() {
+            console.log('页面加载完成，开始测试...');
+            testDevices();
+        };
+    </script>
+</body>
+</html>
