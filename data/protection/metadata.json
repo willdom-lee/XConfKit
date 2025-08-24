@@ -1,0 +1,16 @@
+{
+  "snapshots": [
+    {
+      "name": "current_state",
+      "created_at": "2025-08-22T11:57:25.988980",
+      "data_summary": {
+        "devices": 0,
+        "backups": 0,
+        "strategies": 0,
+        "configs": 38,
+        "ai_configs": 5,
+        "analysis_prompts": 5
+      }
+    }
+  ]
+}

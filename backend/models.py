@@ -1,83 +1,128 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, JSON, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
 
 class Device(Base):
-    """设备表"""
-    __tablename__ = "devices"
+    __tablename__ = 'devices'
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False, comment="设备名称")
-    ip_address = Column(String(45), nullable=False, comment="IP地址")
-    protocol = Column(String(10), default="ssh", comment="连接协议(ssh)")
-    username = Column(String(50), nullable=False, comment="用户名")
-    password = Column(String(100), nullable=False, comment="密码")
-    port = Column(Integer, default=22, comment="端口号")
-    description = Column(String(200), comment="设备描述")
+    name = Column(String(100), nullable=False)
+    ip_address = Column(String(15), nullable=False)
+    username = Column(String(50), nullable=False)
+    password = Column(String(100), nullable=False)
+    protocol = Column(String(10), default="ssh", comment="ssh")
+    port = Column(Integer, default=22, comment="连接端口")
+    connection_status = Column(String(20), default="unknown")
+    latency = Column(Integer, default=0)
+    last_backup = Column(DateTime)
+    last_latency = Column(Float, comment="最后测试的网络延迟(毫秒)")
+    last_test_time = Column(DateTime, comment="最后测试时间")
+    last_backup_time = Column(DateTime, comment="最近一次备份时间")
+    last_backup_type = Column(String(50), comment="最近一次备份类型")
+    description = Column(Text)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     
-    # 关联备份记录
     backups = relationship("Backup", back_populates="device")
+    strategies = relationship("Strategy", back_populates="device")
 
 class Backup(Base):
-    """备份记录表"""
-    __tablename__ = "backups"
+    __tablename__ = 'backups'
     
     id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
-    backup_type = Column(String(20), default="running-config", comment="备份类型")
-    status = Column(String(20), default="pending", comment="备份状态(pending/success/failed)")
-    file_path = Column(String(500), comment="备份文件路径")
-    file_size = Column(Integer, comment="文件大小(字节)")
-    error_message = Column(Text, comment="错误信息")
+    device_id = Column(Integer, ForeignKey('devices.id'))
+    backup_type = Column(String(50), nullable=False)
+    status = Column(String(20), default="pending")
+    file_path = Column(String(255))
+    file_size = Column(Integer, default=0)
+    content = Column(Text)
     created_at = Column(DateTime, default=datetime.now)
     
-    # 关联设备
     device = relationship("Device", back_populates="backups")
+    analysis_records = relationship("AnalysisRecord", back_populates="backup")
 
-class FTPServer(Base):
-    """FTP服务器配置表"""
-    __tablename__ = "ftp_servers"
+class Strategy(Base):
+    __tablename__ = 'strategies'
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False, comment="FTP服务器名称")
-    host = Column(String(100), nullable=False, comment="FTP主机地址")
-    port = Column(Integer, default=21, comment="FTP端口")
-    username = Column(String(50), nullable=False, comment="FTP用户名")
-    password = Column(String(100), nullable=False, comment="FTP密码")
-    remote_path = Column(String(200), default="/", comment="远程路径")
-    is_active = Column(Boolean, default=True, comment="是否启用")
-    created_at = Column(DateTime, default=datetime.now)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-
-class BackupStrategy(Base):
-    """备份策略表"""
-    __tablename__ = "backup_strategies"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False, comment="策略名称")
-    description = Column(String(200), comment="策略描述")
-    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False, comment="设备ID")
-    backup_type = Column(String(20), default="running-config", comment="备份类型")
-    strategy_type = Column(String(20), nullable=False, comment="策略类型(one-time/recurring)")
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+    device_id = Column(Integer, ForeignKey('devices.id'))
+    strategy_type = Column(String(20), default="one-time")
+    backup_type = Column(String(50), nullable=False)
+    is_active = Column(Boolean, default=True)
     
     # 一次性策略字段
-    scheduled_time = Column(DateTime, comment="计划执行时间")
+    scheduled_time = Column(DateTime)
     
     # 周期性策略字段
-    frequency_type = Column(String(10), comment="频率类型(hour/day/month)")
-    frequency_value = Column(Integer, comment="频率值")
-    start_time = Column(DateTime, comment="开始时间")
-    end_time = Column(DateTime, comment="结束时间")
-    last_execution = Column(DateTime, comment="最后执行时间")
-    next_execution = Column(DateTime, comment="下次执行时间")
+    frequency_type = Column(String(20))  # hour, day, month
+    frequency_value = Column(Integer)
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
     
-    # 通用字段
-    is_active = Column(Boolean, default=True, comment="是否启用")
+    # 执行相关字段
+    last_execution = Column(DateTime)
+    next_execution = Column(DateTime)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     
-    # 关联设备
-    device = relationship("Device", backref="backup_strategies")
+    device = relationship("Device", back_populates="strategies")
+
+class Config(Base):
+    __tablename__ = 'configs'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String(50), nullable=False)
+    key = Column(String(100), nullable=False)
+    value = Column(Text)
+    data_type = Column(String(20), default="string")
+    description = Column(Text)
+    default_value = Column(Text)
+    required = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+class AIConfig(Base):
+    __tablename__ = 'ai_configs'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    provider = Column(String(50), nullable=False, default="openai")
+    api_key = Column(String(255))
+    model = Column(String(100), default="gpt-4")
+    base_url = Column(String(255), default="https://api.openai.com/v1")
+    timeout = Column(Integer, default=30)
+    enable_cache = Column(Boolean, default=True)
+    enable_history = Column(Boolean, default=True)
+    auto_retry = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+class AnalysisPrompt(Base):
+    __tablename__ = 'analysis_prompts'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    dimension = Column(String(50), nullable=False, unique=True)
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+    content = Column(Text, nullable=False)
+    is_default = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+class AnalysisRecord(Base):
+    __tablename__ = 'analysis_records'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey('devices.id'))
+    backup_id = Column(Integer, ForeignKey('backups.id'))
+    dimensions = Column(JSON)  # 存储分析维度列表
+    status = Column(String(20), default="processing")  # processing, success, failed
+    result = Column(JSON)  # 存储分析结果
+    error_message = Column(Text)
+    processing_time = Column(Integer)  # 处理时间（秒）
+    created_at = Column(DateTime, default=datetime.now)
+    
+    device = relationship("Device")
+    backup = relationship("Backup", back_populates="analysis_records")

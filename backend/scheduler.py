@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from .database import SessionLocal
 from .services.strategy_service import StrategyService
 from .services.backup_service import BackupService
+from .models import Device
 import logging
 
 logger = logging.getLogger(__name__)
@@ -46,8 +47,9 @@ class BackupScheduler:
                 
     def _check_and_execute_strategies(self):
         """检查并执行到期的策略"""
-        db = SessionLocal()
+        db = None
         try:
+            db = SessionLocal()
             # 获取到期的策略
             due_strategies = StrategyService.get_due_strategies(db)
             
@@ -65,13 +67,21 @@ class BackupScheduler:
         except Exception as e:
             logger.error(f"检查到期策略失败: {str(e)}")
         finally:
-            db.close()
+            if db:
+                try:
+                    db.close()
+                except Exception as e:
+                    logger.error(f"关闭数据库会话失败: {str(e)}")
             
     def _execute_strategy(self, db: Session, strategy):
         """执行单个策略"""
         logger.info(f"开始执行策略: {strategy.name} (ID: {strategy.id})")
         
         try:
+            # 获取设备信息
+            device = db.query(Device).filter(Device.id == strategy.device_id).first()
+            device_name = device.name if device else f"设备{strategy.device_id}"
+            
             # 执行备份
             backup_result = BackupService.execute_backup(
                 db=db,
@@ -83,11 +93,19 @@ class BackupScheduler:
                 logger.info(f"策略 {strategy.name} 执行成功")
                 # 标记策略已执行
                 StrategyService.mark_strategy_executed(db, strategy.id)
+                
+
             else:
                 logger.error(f"策略 {strategy.name} 执行失败: {backup_result}")
                 
+
+                
         except Exception as e:
             logger.error(f"执行策略 {strategy.name} 时发生错误: {str(e)}")
+            
+
+    
+
 
 # 全局调度器实例
 scheduler = BackupScheduler()
@@ -99,3 +117,4 @@ def start_scheduler():
 def stop_scheduler():
     """停止调度器"""
     scheduler.stop()
+

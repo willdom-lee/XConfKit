@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session
-from ..models import BackupStrategy, Device
+from sqlalchemy.orm import Session, joinedload
+from ..models import Strategy, Device
 from ..schemas import BackupStrategyCreate, BackupStrategyUpdate
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -9,9 +9,9 @@ logger = logging.getLogger(__name__)
 
 class StrategyService:
     @staticmethod
-    def create_strategy(db: Session, strategy: BackupStrategyCreate) -> BackupStrategy:
+    def create_strategy(db: Session, strategy: BackupStrategyCreate) -> Strategy:
         """创建备份策略"""
-        db_strategy = BackupStrategy(**strategy.model_dump())
+        db_strategy = Strategy(**strategy.model_dump())
         
         # 计算下次执行时间
         if strategy.strategy_type == "one-time":
@@ -25,19 +25,24 @@ class StrategyService:
         return db_strategy
     
     @staticmethod
-    def get_strategies(db: Session, skip: int = 0, limit: int = 100) -> List[BackupStrategy]:
+    def get_strategies(db: Session, skip: int = 0, limit: int = 100) -> List[Strategy]:
         """获取备份策略列表"""
-        return db.query(BackupStrategy).offset(skip).limit(limit).all()
+        try:
+            return db.query(Strategy).options(joinedload(Strategy.device)).offset(skip).limit(limit).all()
+        except Exception as e:
+            # 如果关联查询失败，返回不包含设备信息的策略列表
+            logger.warning(f"获取策略列表时关联查询失败: {str(e)}")
+            return db.query(Strategy).offset(skip).limit(limit).all()
     
     @staticmethod
-    def get_strategy(db: Session, strategy_id: int) -> Optional[BackupStrategy]:
+    def get_strategy(db: Session, strategy_id: int) -> Optional[Strategy]:
         """根据ID获取备份策略"""
-        return db.query(BackupStrategy).filter(BackupStrategy.id == strategy_id).first()
+        return db.query(Strategy).filter(Strategy.id == strategy_id).first()
     
     @staticmethod
-    def update_strategy(db: Session, strategy_id: int, strategy_update: BackupStrategyUpdate) -> Optional[BackupStrategy]:
+    def update_strategy(db: Session, strategy_id: int, strategy_update: BackupStrategyUpdate) -> Optional[Strategy]:
         """更新备份策略"""
-        db_strategy = db.query(BackupStrategy).filter(BackupStrategy.id == strategy_id).first()
+        db_strategy = db.query(Strategy).filter(Strategy.id == strategy_id).first()
         if not db_strategy:
             return None
         
@@ -67,7 +72,7 @@ class StrategyService:
     @staticmethod
     def delete_strategy(db: Session, strategy_id: int) -> bool:
         """删除备份策略"""
-        db_strategy = db.query(BackupStrategy).filter(BackupStrategy.id == strategy_id).first()
+        db_strategy = db.query(Strategy).filter(Strategy.id == strategy_id).first()
         if not db_strategy:
             return False
         
@@ -76,9 +81,9 @@ class StrategyService:
         return True
     
     @staticmethod
-    def toggle_strategy_status(db: Session, strategy_id: int) -> Optional[BackupStrategy]:
+    def toggle_strategy_status(db: Session, strategy_id: int) -> Optional[Strategy]:
         """切换策略启用状态"""
-        db_strategy = db.query(BackupStrategy).filter(BackupStrategy.id == strategy_id).first()
+        db_strategy = db.query(Strategy).filter(Strategy.id == strategy_id).first()
         if not db_strategy:
             return None
         
@@ -88,18 +93,18 @@ class StrategyService:
         return db_strategy
     
     @staticmethod
-    def get_due_strategies(db: Session) -> List[BackupStrategy]:
+    def get_due_strategies(db: Session) -> List[Strategy]:
         """获取到期的策略"""
         now = datetime.now()
-        return db.query(BackupStrategy).filter(
-            BackupStrategy.is_active == True,
-            BackupStrategy.next_execution <= now
+        return db.query(Strategy).filter(
+            Strategy.is_active == True,
+            Strategy.next_execution <= now
         ).all()
     
     @staticmethod
-    def mark_strategy_executed(db: Session, strategy_id: int) -> Optional[BackupStrategy]:
+    def mark_strategy_executed(db: Session, strategy_id: int) -> Optional[Strategy]:
         """标记策略已执行"""
-        db_strategy = db.query(BackupStrategy).filter(BackupStrategy.id == strategy_id).first()
+        db_strategy = db.query(Strategy).filter(Strategy.id == strategy_id).first()
         if not db_strategy:
             return None
         

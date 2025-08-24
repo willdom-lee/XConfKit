@@ -9,7 +9,7 @@ NC='\033[0m' # No Color
 
 # 配置
 BACKEND_PORT=8000
-FRONTEND_PORT=5173
+FRONTEND_PORT=5174
 MAX_WAIT_TIME=30
 
 echo -e "${BLUE}==========================================${NC}"
@@ -142,7 +142,7 @@ verify_services_stopped() {
     local frontend_port_in_use=0
     
     # 检查进程
-    if pgrep -f "python3 start_backend.py" >/dev/null 2>&1; then
+    if pgrep -f "python start_backend.py" >/dev/null 2>&1; then
         backend_running=1
     fi
     
@@ -186,7 +186,7 @@ force_cleanup() {
     echo -e "${YELLOW}执行强制清理...${NC}"
     
     # 强制终止所有相关进程
-    pkill -f "python3 start_backend.py" 2>/dev/null
+    pkill -f "python start_backend.py" 2>/dev/null
     pkill -f "npm run dev" 2>/dev/null
     pkill -f "uvicorn" 2>/dev/null
     pkill -f "python.*main" 2>/dev/null
@@ -217,7 +217,7 @@ main() {
     cleanup_pid_files
     
     # 2. 停止特定进程
-    stop_processes_by_pattern "python3 start_backend.py" "后端服务"
+    stop_processes_by_pattern "python start_backend.py" "后端服务"
     stop_processes_by_pattern "npm run dev" "前端服务"
     
     # 3. 停止端口上的进程
@@ -241,7 +241,7 @@ main() {
         else
             echo -e "${RED}❌ 强制清理后仍有服务在运行，请手动检查${NC}"
             echo -e "${YELLOW}可以使用以下命令手动检查:${NC}"
-            echo -e "  ps aux | grep -E '(python3 start_backend.py|npm run dev)'"
+            echo -e "  ps aux | grep -E '(python start_backend.py|npm run dev)'"
             echo -e "  lsof -i :$BACKEND_PORT"
             echo -e "  lsof -i :$FRONTEND_PORT"
         fi

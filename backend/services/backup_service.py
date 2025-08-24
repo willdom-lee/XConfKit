@@ -1,11 +1,26 @@
 from sqlalchemy.orm import Session
 from ..models import Device, Backup
 from ..schemas import BackupCreate
+from ..services.config_manager import ConfigManager
 import paramiko
 import os
 from datetime import datetime
 from typing import Optional
 import logging
+
+import os
+import json
+import shutil
+import logging
+from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+from ..models import Device, Backup, Config
+from ..database import get_db
+import paramiko
+import socket
+import time
+import threading
+from typing import List, Dict, Optional
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +46,7 @@ class BackupService:
         return query.order_by(Backup.created_at.desc()).offset(skip).limit(limit).all()
     
     @staticmethod
-    def execute_backup(db: Session, device_id: int, backup_type: str = "running-config") -> dict:
+    def execute_backup(db: Session, device_id: int, backup_type: str) -> dict:
         """执行备份操作"""
         # 获取设备信息
         device = db.query(Device).filter(Device.id == device_id).first()
@@ -53,12 +68,44 @@ class BackupService:
                 db_backup.status = "success"
                 db_backup.file_path = result["file_path"]
                 db_backup.file_size = result["file_size"]
+                
+                # 读取文件内容并保存到数据库
+                try:
+                    with open(result["file_path"], 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        db_backup.content = content
+                        logger.info(f"已保存配置文件内容到数据库，长度: {len(content)} 字符")
+                except Exception as content_error:
+                    logger.warning(f"读取配置文件内容失败: {str(content_error)}")
+                    # 即使读取内容失败，也不影响备份的成功状态
+                
+                # 更新设备的最近备份信息
+                device.last_backup_time = datetime.now()
+                device.last_backup_type = backup_type
             else:
                 db_backup.status = "failed"
                 db_backup.error_message = result["message"]
             
             db.commit()
             
+        except (ValueError, TypeError) as e:
+            logger.error(f"备份执行参数错误: {str(e)}")
+            db_backup.status = "failed"
+            db_backup.error_message = f"参数错误: {str(e)}"
+            db.commit()
+            result = {"success": False, "message": f"备份执行参数错误: {str(e)}"}
+        except (ConnectionError, TimeoutError) as e:
+            logger.error(f"备份连接失败: {str(e)}")
+            db_backup.status = "failed"
+            db_backup.error_message = f"连接失败: {str(e)}"
+            db.commit()
+            result = {"success": False, "message": f"备份连接失败: {str(e)}"}
+        except (OSError, IOError) as e:
+            logger.error(f"备份文件操作失败: {str(e)}")
+            db_backup.status = "failed"
+            db_backup.error_message = f"文件操作失败: {str(e)}"
+            db.commit()
+            result = {"success": False, "message": f"备份文件操作失败: {str(e)}"}
         except Exception as e:
             logger.error(f"备份执行失败: {str(e)}")
             db_backup.status = "failed"
@@ -70,7 +117,40 @@ class BackupService:
         if not result.get("success", False) and not result.get("message"):
             result["message"] = "备份执行失败，请检查设备连接和命令配置"
         
+
+        
         return result
+    
+    @staticmethod
+    def update_device_last_backup_info(db: Session, device_id: int):
+        """更新设备的最近备份信息"""
+        try:
+            # 获取设备
+            device = db.query(Device).filter(Device.id == device_id).first()
+            if not device:
+                return
+            
+            # 查找该设备的最新备份记录
+            latest_backup = db.query(Backup).filter(
+                Backup.device_id == device_id,
+                Backup.status == 'success'
+            ).order_by(Backup.created_at.desc()).first()
+            
+            if latest_backup:
+                # 更新设备的最近备份信息
+                device.last_backup_time = latest_backup.created_at
+                device.last_backup_type = latest_backup.backup_type
+            else:
+                # 如果没有成功的备份记录，清空最近备份信息
+                device.last_backup_time = None
+                device.last_backup_type = None
+            
+            db.commit()
+            logger.info(f"已更新设备 {device.name} 的最近备份信息")
+            
+        except Exception as e:
+            logger.error(f"更新设备最近备份信息失败: {str(e)}")
+            db.rollback()
     
     @staticmethod
     def _perform_backup(device: Device, backup_type: str, backup_id: int) -> dict:
@@ -99,7 +179,7 @@ class BackupService:
             # 连接设备
             ssh.connect(
                 device.ip_address,
-                port=device.port,
+                port=device.port,  # 使用设备配置的端口
                 username=device.username,
                 password=device.password,
                 timeout=30,
@@ -191,7 +271,8 @@ class BackupService:
                     return 'cisco'
                 else:
                     return 'unknown'
-        except:
+        except Exception as e:
+            logger.warning(f"设备类型检测失败: {str(e)}")
             return 'unknown'
     
     @staticmethod
@@ -228,7 +309,7 @@ class BackupService:
             # 连接设备
             ssh.connect(
                 device.ip_address,
-                port=device.port or 22,
+                port=device.port,  # 使用默认SSH端口
                 username=device.username,
                 password=device.password,
                 timeout=30,
@@ -301,7 +382,7 @@ class BackupService:
             # 连接设备
             ssh.connect(
                 device.ip_address,
-                port=device.port or 22,
+                port=device.port,  # 使用默认SSH端口
                 username=device.username,
                 password=device.password,
                 timeout=30,
@@ -363,7 +444,7 @@ class BackupService:
             # 连接设备
             ssh.connect(
                 device.ip_address,
-                port=device.port or 22,
+                port=device.port,  # 使用默认SSH端口
                 username=device.username,
                 password=device.password,
                 timeout=30,
@@ -425,7 +506,7 @@ class BackupService:
             # 连接设备
             ssh.connect(
                 device.ip_address,
-                port=device.port or 22,
+                port=device.port,  # 使用默认SSH端口
                 username=device.username,
                 password=device.password,
                 timeout=30,
@@ -491,7 +572,7 @@ class BackupService:
             # 连接设备
             ssh.connect(
                 device.ip_address,
-                port=device.port or 22,
+                port=device.port,  # 使用默认SSH端口
                 username=device.username,
                 password=device.password,
                 timeout=30,
@@ -518,7 +599,9 @@ class BackupService:
                 return BackupService._interactive_h3c_backup(device, backup_type, backup_id, h3c_command)
             else:
                 # 其他命令可以直接执行
-                stdin, stdout, stderr = ssh.exec_command(h3c_command, timeout=120)
+                # 使用配置的超时时间
+                backup_timeout = ConfigManager.get_config('backup', 'backup_timeout', 300)
+                stdin, stdout, stderr = ssh.exec_command(h3c_command, timeout=backup_timeout)
                 output = stdout.read().decode('utf-8')
                 error = stderr.read().decode('utf-8')
                 
@@ -556,21 +639,27 @@ class BackupService:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             
+            # 使用配置的超时时间
+            ssh_timeout = ConfigManager.get_config('connection', 'ssh_timeout', 10)
+            banner_timeout = ConfigManager.get_config('connection', 'banner_timeout', 60)
+            
             # 连接设备
             ssh.connect(
                 device.ip_address,
-                port=device.port or 22,
+                port=device.port,  # 使用默认SSH端口
                 username=device.username,
                 password=device.password,
-                timeout=30,
-                banner_timeout=60,
+                timeout=ssh_timeout,
+                banner_timeout=banner_timeout,
                 allow_agent=False,
                 look_for_keys=False
             )
             
             # 创建交互式会话
             channel = ssh.invoke_shell()
-            channel.settimeout(30)
+            # 使用配置的超时时间
+            interactive_timeout = ConfigManager.get_config('backup', 'backup_timeout', 300)
+            channel.settimeout(interactive_timeout)
             
             # 等待登录完成
             time.sleep(2)
@@ -679,7 +768,7 @@ class BackupService:
             # 连接设备
             interactive_ssh.connect(
                 device.ip_address,
-                port=device.port or 22,
+                port=device.port,  # 使用默认SSH端口
                 username=device.username,
                 password=device.password,
                 timeout=30,
@@ -866,3 +955,145 @@ class BackupService:
             f.write(content)
         
         return file_path
+
+class AutoBackupService:
+    """自动备份服务"""
+    
+    @staticmethod
+    def schedule_auto_backup():
+        """调度自动备份任务"""
+        import schedule
+        import time
+        
+        # 从配置获取备份时间，默认为每天凌晨2点
+        backup_time = ConfigManager.get_config('backup', 'auto_backup_time', '02:00')
+        
+        # 设置定时任务
+        schedule.every().day.at(backup_time).do(AutoBackupService.perform_auto_backup)
+        
+        logger.info(f"自动备份已调度，执行时间: {backup_time}")
+        
+        # 启动调度器
+        while True:
+            schedule.run_pending()
+            time.sleep(60)  # 每分钟检查一次
+    
+    @staticmethod
+    def perform_auto_backup():
+        """执行自动备份"""
+        logger.info("开始执行自动备份...")
+        
+        try:
+            # 获取数据库会话
+            db = next(get_db())
+            
+            # 获取所有活跃设备
+            devices = db.query(Device).filter(Device.connection_status == 'success').all()
+            
+            if not devices:
+                logger.info("没有找到活跃设备，跳过自动备份")
+                return
+            
+            backup_results = []
+            
+            for device in devices:
+                try:
+                    # 获取设备的备份策略
+                    strategies = db.query(Strategy).filter(
+                        Strategy.device_id == device.id,
+                        Strategy.is_active == True
+                    ).all()
+                    
+                    if not strategies:
+                        logger.info(f"设备 {device.name} 没有活跃的备份策略")
+                        continue
+                    
+                    # 执行备份
+                    for strategy in strategies:
+                        result = BackupService.create_backup(
+                            db, device.id, strategy.backup_type, "auto"
+                        )
+                        
+                        if result["success"]:
+                            backup_results.append({
+                                "device": device.name,
+                                "type": strategy.backup_type,
+                                "status": "success"
+                            })
+                            logger.info(f"设备 {device.name} 的 {strategy.backup_type} 备份成功")
+                        else:
+                            backup_results.append({
+                                "device": device.name,
+                                "type": strategy.backup_type,
+                                "status": "failed",
+                                "error": result["message"]
+                            })
+                            logger.error(f"设备 {device.name} 的 {strategy.backup_type} 备份失败: {result['message']}")
+                
+                except Exception as e:
+                    logger.error(f"设备 {device.name} 自动备份异常: {str(e)}")
+                    backup_results.append({
+                        "device": device.name,
+                        "type": "unknown",
+                        "status": "failed",
+                        "error": str(e)
+                    })
+            
+            # 记录备份结果
+            AutoBackupService._log_backup_results(backup_results)
+            
+            # 清理旧备份
+            AutoBackupService._cleanup_old_backups()
+            
+            logger.info(f"自动备份完成，成功: {len([r for r in backup_results if r['status'] == 'success'])}，失败: {len([r for r in backup_results if r['status'] == 'failed'])}")
+            
+        except Exception as e:
+            logger.error(f"自动备份执行失败: {str(e)}")
+        finally:
+            db.close()
+    
+    @staticmethod
+    def _log_backup_results(results: List[Dict]):
+        """记录备份结果"""
+        try:
+            log_file = "logs/auto_backup.log"
+            os.makedirs(os.path.dirname(log_file), exist_ok=True)
+            
+            with open(log_file, 'a', encoding='utf-8') as f:
+                f.write(f"\n=== 自动备份报告 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+                for result in results:
+                    f.write(f"设备: {result['device']}, 类型: {result['type']}, 状态: {result['status']}")
+                    if result.get('error'):
+                        f.write(f", 错误: {result['error']}")
+                    f.write("\n")
+                f.write("=" * 50 + "\n")
+        except Exception as e:
+            logger.error(f"记录备份结果失败: {str(e)}")
+    
+    @staticmethod
+    def _cleanup_old_backups():
+        """清理旧备份"""
+        try:
+            # 获取保留天数
+            retention_days = ConfigManager.get_config('backup', 'backup_retention_days', 30)
+            cutoff_date = datetime.now() - timedelta(days=int(retention_days))
+            
+            # 清理数据库中的旧备份记录
+            db = next(get_db())
+            old_backups = db.query(Backup).filter(Backup.created_at < cutoff_date).all()
+            
+            for backup in old_backups:
+                # 删除备份文件
+                if backup.file_path and os.path.exists(backup.file_path):
+                    os.remove(backup.file_path)
+                
+                # 删除数据库记录
+                db.delete(backup)
+            
+            db.commit()
+            logger.info(f"清理了 {len(old_backups)} 个旧备份")
+            
+        except Exception as e:
+            logger.error(f"清理旧备份失败: {str(e)}")
+        finally:
+            db.close()

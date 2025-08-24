@@ -102,3 +102,174 @@
   display: flex;
   gap: 8px;
 }
+
+/* 表格响应式样式 */
+.ant-table-thead > tr > th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 80px;
+  padding: 12px 8px;
+}
+
+/* 设备管理表格特定样式 */
+.device-table .ant-table-thead > tr > th:nth-child(1) { /* 设备名称 */
+  min-width: 150px;
+  width: 15%;
+}
+
+.device-table .ant-table-thead > tr > th:nth-child(2) { /* 用户名 */
+  min-width: 100px;
+  width: 10%;
+}
+
+.device-table .ant-table-thead > tr > th:nth-child(3) { /* 连接状态 */
+  min-width: 100px;
+  width: 10%;
+}
+
+.device-table .ant-table-thead > tr > th:nth-child(4) { /* 网络延迟 */
+  min-width: 100px;
+  width: 10%;
+}
+
+.device-table .ant-table-thead > tr > th:nth-child(5) { /* 最近备份 */
+  min-width: 140px;
+  width: 15%;
+}
+
+.device-table .ant-table-thead > tr > th:nth-child(6) { /* 描述 */
+  min-width: 120px;
+  width: 15%;
+}
+
+.device-table .ant-table-thead > tr > th:nth-child(7) { /* 创建时间 */
+  min-width: 140px;
+  width: 15%;
+}
+
+.device-table .ant-table-thead > tr > th:nth-child(8) { /* 操作 */
+  min-width: 200px;
+  width: 10%;
+}
+
+/* 策略管理表格特定样式 */
+.strategy-table .ant-table-thead > tr > th:nth-child(1) { /* 策略名称 */
+  min-width: 150px;
+  width: 20%;
+}
+
+.strategy-table .ant-table-thead > tr > th:nth-child(2) { /* 设备 */
+  min-width: 120px;
+  width: 15%;
+}
+
+.strategy-table .ant-table-thead > tr > th:nth-child(3) { /* 策略类型 */
+  min-width: 100px;
+  width: 10%;
+}
+
+.strategy-table .ant-table-thead > tr > th:nth-child(4) { /* 备份类型 */
+  min-width: 100px;
+  width: 10%;
+}
+
+.strategy-table .ant-table-thead > tr > th:nth-child(5) { /* 状态 */
+  min-width: 80px;
+  width: 8%;
+}
+
+.strategy-table .ant-table-thead > tr > th:nth-child(6) { /* 下次执行 */
+  min-width: 140px;
+  width: 15%;
+}
+
+.strategy-table .ant-table-thead > tr > th:nth-child(7) { /* 最后执行 */
+  min-width: 140px;
+  width: 15%;
+}
+
+.strategy-table .ant-table-thead > tr > th:nth-child(8) { /* 操作 */
+  min-width: 180px;
+  width: 7%;
+}
+
+/* 备份管理表格特定样式 */
+.backup-table .ant-table-thead > tr > th:nth-child(1) { /* 设备 */
+  min-width: 120px;
+  width: 15%;
+}
+
+.backup-table .ant-table-thead > tr > th:nth-child(2) { /* 备份类型 */
+  min-width: 100px;
+  width: 12%;
+}
+
+.backup-table .ant-table-thead > tr > th:nth-child(3) { /* 状态 */
+  min-width: 80px;
+  width: 8%;
+}
+
+.backup-table .ant-table-thead > tr > th:nth-child(4) { /* 文件大小 */
+  min-width: 100px;
+  width: 10%;
+}
+
+.backup-table .ant-table-thead > tr > th:nth-child(5) { /* 创建时间 */
+  min-width: 140px;
+  width: 20%;
+}
+
+.backup-table .ant-table-thead > tr > th:nth-child(6) { /* 操作 */
+  min-width: 150px;
+  width: 15%;
+}
+
+/* 响应式断点 */
+@media (max-width: 1200px) {
+  .ant-table-thead > tr > th {
+    padding: 8px 4px;
+    font-size: 13px;
+  }
+  
+  .device-table .ant-table-thead > tr > th:nth-child(6), /* 描述列在小屏幕上隐藏 */
+  .device-table .ant-table-tbody > tr > td:nth-child(6) {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .ant-table-thead > tr > th {
+    padding: 6px 2px;
+    font-size: 12px;
+  }
+  
+  /* 在小屏幕上隐藏更多列 */
+  .device-table .ant-table-thead > tr > th:nth-child(7), /* 创建时间 */
+  .device-table .ant-table-tbody > tr > td:nth-child(7),
+  .strategy-table .ant-table-thead > tr > th:nth-child(6), /* 下次执行 */
+  .strategy-table .ant-table-tbody > tr > td:nth-child(6),
+  .strategy-table .ant-table-thead > tr > th:nth-child(7), /* 最后执行 */
+  .strategy-table .ant-table-tbody > tr > td:nth-child(7) {
+    display: none;
+  }
+}
+
+/* 表格内容样式优化 */
+.ant-table-tbody > tr > td {
+  padding: 8px;
+  vertical-align: top;
+}
+
+/* 操作按钮组样式 */
+.ant-table-tbody .ant-space {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ant-table-tbody .ant-btn {
+  font-size: 12px;
+  padding: 2px 6px;
+  height: auto;
+  line-height: 1.4;
+}

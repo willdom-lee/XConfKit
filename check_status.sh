@@ -9,7 +9,7 @@ NC='\033[0m' # No Color
 
 # 配置
 BACKEND_PORT=8000
-FRONTEND_PORT=5173
+FRONTEND_PORT=5174
 
 echo -e "${BLUE}==========================================${NC}"
 echo -e "${BLUE}XConfKit 服务状态检查${NC}"
@@ -122,7 +122,7 @@ show_system_resources() {
     echo -e "${BLUE}系统资源使用情况...${NC}"
     
     # 显示相关进程的资源使用
-    local backend_pids=$(pgrep -f "python3 start_backend.py" 2>/dev/null)
+    local backend_pids=$(pgrep -f "python start_backend.py" 2>/dev/null)
     local frontend_pids=$(pgrep -f "npm run dev" 2>/dev/null)
     
     if [ ! -z "$backend_pids" ] || [ ! -z "$frontend_pids" ]; then
@@ -158,7 +158,7 @@ main() {
     
     # 检查进程状态
     echo -e "${BLUE}检查进程状态...${NC}"
-    check_process_status "python3 start_backend.py" "后端服务"
+    check_process_status "python start_backend.py" "后端服务"
     check_process_status "npm run dev" "前端服务"
     echo ""
     
@@ -201,3 +201,4 @@ main() {
 
 # 执行主函数
 main "$@"
+

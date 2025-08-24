@@ -12,15 +12,21 @@ import {
   Col,
   Typography,
   Modal,
+  Tooltip,
+  Divider,
 } from 'antd';
 import {
   CloudUploadOutlined,
   DeleteOutlined,
   EyeOutlined,
   DownloadOutlined,
+  CopyOutlined,
+  InfoCircleOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { deviceAPI, backupAPI } from '../services/api';
 import dayjs from 'dayjs';
+import QuickAnalysisModal from './common/QuickAnalysisModal';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -41,15 +47,60 @@ const BackupManagement = () => {
   const [filterDevice, setFilterDevice] = useState(null);
   const [filterStatus, setFilterStatus] = useState(null);
   const [filterType, setFilterType] = useState(null);
+  
+  // AI分析相关状态
+  const [analysisModalVisible, setAnalysisModalVisible] = useState(false);
+  const [selectedAnalysisBackup, setSelectedAnalysisBackup] = useState(null);
+
+  // 备份类型映射（与系统保持一致）
+  const backupTypeMap = {
+    'running-config': '运行配置',
+    'startup-config': '启动配置', 
+    'ip-route': '路由表',
+    'arp-table': 'ARP表',
+    'mac-table': 'MAC表',
+  };
+
+  // 备份类型对应的命令信息
+  const backupCommandMap = {
+    'running-config': {
+      h3c: 'display current-configuration',
+      cisco: 'show running-config',
+      huawei: 'display current-configuration',
+      description: '获取设备当前运行的配置信息'
+    },
+    'startup-config': {
+      h3c: 'display saved-configuration',
+      cisco: 'show startup-config', 
+      huawei: 'display saved-configuration',
+      description: '获取设备启动配置信息'
+    },
+    'ip-route': {
+      h3c: 'display ip routing-table',
+      cisco: 'show ip route',
+      huawei: 'display ip routing-table',
+      description: '获取设备路由表信息'
+    },
+    'arp-table': {
+      h3c: 'display arp',
+      cisco: 'show arp',
+      huawei: 'display arp',
+      description: '获取设备ARP表信息'
+    },
+    'mac-table': {
+      h3c: 'display mac-address',
+      cisco: 'show mac address-table',
+      huawei: 'display mac-address',
+      description: '获取设备MAC地址表信息'
+    },
+  };
 
   // 获取设备列表
   const fetchDevices = async () => {
     try {
       const data = await deviceAPI.getDevices();
-      console.log('获取到的设备列表:', data);
       setDevices(data);
     } catch (error) {
-      console.error('获取设备列表失败:', error);
       message.error('获取设备列表失败');
     }
   };
@@ -58,7 +109,6 @@ const BackupManagement = () => {
   const fetchBackups = async () => {
     setLoading(true);
     try {
-      // 获取所有备份记录，不按设备筛选
       const data = await backupAPI.getBackups();
       setBackups(data);
     } catch (error) {
@@ -77,17 +127,14 @@ const BackupManagement = () => {
   const getFilteredBackups = () => {
     let filtered = backups;
     
-    // 按设备筛选
     if (filterDevice) {
       filtered = filtered.filter(backup => backup.device?.id === filterDevice);
     }
     
-    // 按状态筛选
     if (filterStatus) {
       filtered = filtered.filter(backup => backup.status === filterStatus);
     }
     
-    // 按备份类型筛选
     if (filterType) {
       filtered = filtered.filter(backup => backup.backup_type === filterType);
     }
@@ -114,26 +161,19 @@ const BackupManagement = () => {
 
     setBackupLoading(true);
     try {
-      console.log('执行备份:', { deviceId: selectedDevice, backupType });
       const result = await backupAPI.executeBackup(selectedDevice, backupType);
-      console.log('备份结果:', result);
-      console.log('结果类型:', typeof result);
-      console.log('结果键:', Object.keys(result || {}));
       
-      // 检查结果格式
       if (result && typeof result === 'object') {
-              if (result.success === true) {
-        message.success('备份执行成功');
-        fetchBackups(); // 刷新所有备份记录
-      } else {
+        if (result.success === true) {
+          message.success('备份执行成功');
+          fetchBackups();
+        } else {
           message.error(`备份执行失败: ${result.message || '未知错误'}`);
         }
       } else {
-        console.error('意外的响应格式:', result);
         message.error('备份执行失败: 响应格式错误');
       }
     } catch (error) {
-      console.error('备份执行错误:', error);
       message.error(`备份执行失败: ${error.message || '网络错误'}`);
     } finally {
       setBackupLoading(false);
@@ -149,7 +189,7 @@ const BackupManagement = () => {
         try {
           await backupAPI.deleteBackup(backupId);
           message.success('备份记录删除成功');
-          fetchBackups(); // 刷新所有备份记录
+          fetchBackups();
         } catch (error) {
           message.error('删除失败');
         }
@@ -173,7 +213,7 @@ const BackupManagement = () => {
           if (result.success) {
             message.success(result.message);
             setSelectedRowKeys([]);
-            fetchBackups(); // 刷新所有备份记录
+            fetchBackups();
           } else {
             message.error('批量删除失败');
           }
@@ -207,46 +247,37 @@ const BackupManagement = () => {
 
   // 下载备份文件
   const downloadBackup = async (backup) => {
+    if (backup.status !== 'success' && backup.status !== 'completed') {
+      message.warning('只能下载成功的备份文件');
+      return;
+    }
+    
+    if (!backup.file_path) {
+      message.warning('备份文件不存在');
+      return;
+    }
+    
     try {
       setContentLoading(true);
       
-      // 检查备份状态
-      if (backup.status !== 'success') {
-        message.warning('只能下载成功的备份文件');
-        return;
-      }
-      
-      if (!backup.file_path) {
-        message.warning('备份文件不存在');
-        return;
-      }
-      
-      // 使用API下载文件
       const response = await backupAPI.downloadBackup(backup.id);
       
-      // 创建下载链接
       const blob = new Blob([response], { type: 'application/octet-stream' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       
-      // 设置文件名
       const fileName = backup.file_path ? backup.file_path.split('/').pop() : `backup_${backup.id}.txt`;
       link.download = fileName;
       
-      // 触发下载
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      // 清理URL对象
       window.URL.revokeObjectURL(url);
       
       message.success(`文件 ${fileName} 下载成功`);
     } catch (error) {
-      console.error('下载失败:', error);
-      
-      // 根据错误类型显示不同的错误信息
       if (error.response?.status === 404) {
         message.error('备份文件不存在或已被删除');
       } else if (error.response?.status === 500) {
@@ -259,37 +290,93 @@ const BackupManagement = () => {
     }
   };
 
+  // 复制配置内容到剪贴板
+  const copyBackupContent = async (backup) => {
+    if (backup.status !== 'success' && backup.status !== 'completed') {
+      message.warning('只能复制成功的备份内容');
+      return;
+    }
+    
+    try {
+      setContentLoading(true);
+      
+      const result = await backupAPI.getBackupContent(backup.id);
+      if (result.success) {
+        await navigator.clipboard.writeText(result.content);
+        message.success('配置内容已复制到剪贴板');
+      } else {
+        message.error('获取备份内容失败');
+      }
+    } catch (error) {
+      message.error('复制失败，请手动复制');
+    } finally {
+      setContentLoading(false);
+    }
+  };
+
+  // 打开AI分析弹窗
+  const openAnalysisModal = (backup) => {
+    setSelectedAnalysisBackup(backup);
+    setAnalysisModalVisible(true);
+  };
+
+  // AI分析完成回调
+  const handleAnalysisComplete = (result) => {
+    // 可以在这里处理分析完成后的逻辑
+    // 分析完成处理逻辑
+  };
+
   // 表格列定义
   const columns = [
     {
       title: '设备',
       dataIndex: 'device',
       key: 'device',
+      width: 120,
       render: (device) => device?.name || '-',
     },
     {
       title: '备份类型',
       dataIndex: 'backup_type',
       key: 'backup_type',
+      width: 120,
       render: (type) => {
-        const typeMap = {
-          'running-config': '运行配置',
-          'startup-config': '启动配置',
-          'ip-route': '路由表',
-          'arp-table': 'ARP表',
-          'mac-table': 'MAC表',
-        };
-        return typeMap[type] || type;
+        const displayName = backupTypeMap[type] || type;
+        const commandInfo = backupCommandMap[type];
+        
+        return (
+          <div>
+            <div style={{ fontWeight: 'bold' }}>{displayName}</div>
+            {commandInfo && (
+              <Tooltip title={
+                <div>
+                  <div><strong>命令说明：</strong>{commandInfo.description}</div>
+                  <Divider style={{ margin: '4px 0' }} />
+                  <div><strong>H3C命令：</strong>{commandInfo.h3c}</div>
+                  <div><strong>Cisco命令：</strong>{commandInfo.cisco}</div>
+                  <div><strong>华为命令：</strong>{commandInfo.huawei}</div>
+                </div>
+              }>
+                <Text type="secondary" style={{ fontSize: '12px', cursor: 'help' }}>
+                  <InfoCircleOutlined style={{ marginRight: 4 }} />
+                  查看命令
+                </Text>
+              </Tooltip>
+            )}
+          </div>
+        );
       },
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 80,
       render: (status) => {
         const statusMap = {
           pending: { color: 'processing', text: '进行中' },
           success: { color: 'success', text: '成功' },
+          completed: { color: 'success', text: '成功' },
           failed: { color: 'error', text: '失败' },
         };
         const config = statusMap[status] || { color: 'default', text: status };
@@ -300,6 +387,7 @@ const BackupManagement = () => {
       title: '文件大小',
       dataIndex: 'file_size',
       key: 'file_size',
+      width: 100,
       render: (size) => {
         if (!size) return '-';
         const kb = size / 1024;
@@ -310,28 +398,47 @@ const BackupManagement = () => {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
+      width: 140,
       render: (date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss'),
     },
     {
       title: '操作',
       key: 'actions',
+      width: 250,
+      fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button
             size="small"
             icon={<EyeOutlined />}
             onClick={() => viewBackup(record)}
-            disabled={record.status !== 'success'}
+            disabled={record.status !== 'success' && record.status !== 'completed'}
           >
             查看
           </Button>
           <Button
             size="small"
+            icon={<CopyOutlined />}
+            onClick={() => copyBackupContent(record)}
+            disabled={record.status !== 'success' && record.status !== 'completed'}
+          >
+            复制
+          </Button>
+          <Button
+            size="small"
             icon={<DownloadOutlined />}
             onClick={() => downloadBackup(record)}
-            disabled={record.status !== 'success'}
+            disabled={record.status !== 'success' && record.status !== 'completed'}
           >
             下载
+          </Button>
+          <Button
+            size="small"
+            icon={<RobotOutlined />}
+            onClick={() => openAnalysisModal(record)}
+            disabled={record.status !== 'success' && record.status !== 'completed'}
+          >
+            AI分析
           </Button>
           <Popconfirm
             title="确定要删除这个备份记录吗？"
@@ -359,8 +466,6 @@ const BackupManagement = () => {
         <Text type="secondary">执行设备配置备份和查看备份记录</Text>
       </div>
 
-
-
       {/* 备份操作区域 */}
       <Card title="执行备份" style={{ marginBottom: 24 }}>
         <Row gutter={16} align="middle">
@@ -371,7 +476,6 @@ const BackupManagement = () => {
               placeholder="请选择设备"
               value={selectedDevice}
               onChange={(value) => {
-                console.log('选择设备:', value);
                 setSelectedDevice(value);
               }}
             >
@@ -388,16 +492,20 @@ const BackupManagement = () => {
               style={{ width: '100%', marginTop: 8 }}
               value={backupType}
               onChange={(value) => {
-                console.log('选择备份类型:', value);
                 setBackupType(value);
               }}
             >
-              <Option value="running-config">运行配置</Option>
-              <Option value="startup-config">启动配置</Option>
-              <Option value="ip-route">路由表</Option>
-              <Option value="arp-table">ARP表</Option>
-              <Option value="mac-table">MAC表</Option>
+              {Object.entries(backupTypeMap).map(([key, value]) => (
+                <Option key={key} value={key}>
+                  {value}
+                </Option>
+              ))}
             </Select>
+            {backupCommandMap[backupType] && (
+              <div style={{ marginTop: 4, fontSize: '12px', color: '#8c8c8c' }}>
+                {backupCommandMap[backupType].description}
+              </div>
+            )}
           </Col>
           <Col span={6}>
             <Button
@@ -405,8 +513,6 @@ const BackupManagement = () => {
               icon={<CloudUploadOutlined />}
               loading={backupLoading}
               onClick={() => {
-                console.log('点击执行备份按钮');
-                console.log('当前选择:', { selectedDevice, backupType });
                 executeBackup();
               }}
               disabled={!selectedDevice}
@@ -462,11 +568,11 @@ const BackupManagement = () => {
                 onChange={setFilterType}
                 allowClear
               >
-                <Option value="running-config">运行配置</Option>
-                <Option value="startup-config">启动配置</Option>
-                <Option value="ip-route">路由表</Option>
-                <Option value="arp-table">ARP表</Option>
-                <Option value="mac-table">MAC表</Option>
+                {Object.entries(backupTypeMap).map(([key, value]) => (
+                  <Option key={key} value={key}>
+                    {value}
+                  </Option>
+                ))}
               </Select>
             </Col>
             <Col span={6}>
@@ -517,10 +623,12 @@ const BackupManagement = () => {
         </div>
         
         <Table
+          className="backup-table"
           columns={columns}
           dataSource={filteredBackups}
           rowKey="id"
           loading={loading}
+          scroll={{ x: 1200 }}
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,
@@ -547,19 +655,66 @@ const BackupManagement = () => {
 
       {/* 查看备份内容模态框 */}
       <Modal
-        title="备份内容"
+        title={
+          <div>
+            <div>备份内容</div>
+            {selectedBackup && (
+              <div style={{ fontSize: '14px', fontWeight: 'normal', color: '#8c8c8c', marginTop: 4 }}>
+                {selectedBackup.device?.name} - {backupTypeMap[selectedBackup.backup_type]}
+              </div>
+            )}
+          </div>
+        }
         open={viewModalVisible}
         onCancel={() => setViewModalVisible(false)}
-        footer={null}
+        footer={[
+          <Button key="copy" icon={<CopyOutlined />} onClick={() => {
+            if (backupContent) {
+              navigator.clipboard.writeText(backupContent);
+              message.success('配置内容已复制到剪贴板');
+            }
+          }}>
+            复制内容
+          </Button>,
+          <Button key="download" icon={<DownloadOutlined />} onClick={() => {
+            if (selectedBackup) {
+              downloadBackup(selectedBackup);
+            }
+          }}>
+            下载文件
+          </Button>,
+          <Button key="close" onClick={() => setViewModalVisible(false)}>
+            关闭
+          </Button>
+        ]}
         width={1000}
         style={{ top: 20 }}
       >
         {selectedBackup && (
           <div>
             <div style={{ marginBottom: 16 }}>
-              <Text strong>设备：</Text> {selectedBackup.device?.name}<br />
-              <Text strong>备份类型：</Text> {selectedBackup.backup_type}<br />
-              <Text strong>备份时间：</Text> {dayjs(selectedBackup.created_at).format('YYYY-MM-DD HH:mm:ss')}
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Text strong>设备：</Text> {selectedBackup.device?.name}
+                </Col>
+                <Col span={8}>
+                  <Text strong>备份类型：</Text> {backupTypeMap[selectedBackup.backup_type]}
+                </Col>
+                <Col span={8}>
+                  <Text strong>备份时间：</Text> {dayjs(selectedBackup.created_at).format('YYYY-MM-DD HH:mm:ss')}
+                </Col>
+              </Row>
+              
+              {backupCommandMap[selectedBackup.backup_type] && (
+                <div style={{ marginTop: 12, padding: '8px 12px', background: '#f6ffed', borderRadius: 4, border: '1px solid #b7eb8f' }}>
+                  <Text strong>使用的命令：</Text>
+                  <div style={{ marginTop: 4, fontSize: '12px' }}>
+                    <div>H3C: {backupCommandMap[selectedBackup.backup_type].h3c}</div>
+                    <div>Cisco: {backupCommandMap[selectedBackup.backup_type].cisco}</div>
+                    <div>华为: {backupCommandMap[selectedBackup.backup_type].huawei}</div>
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* 备份信息 */}
@@ -606,6 +761,18 @@ const BackupManagement = () => {
           </div>
         )}
       </Modal>
+
+      {/* AI分析弹窗 */}
+      <QuickAnalysisModal
+        visible={analysisModalVisible}
+        onCancel={() => {
+          setAnalysisModalVisible(false);
+          setSelectedAnalysisBackup(null);
+        }}
+        device={selectedAnalysisBackup?.device}
+        backup={selectedAnalysisBackup}
+        onAnalysisComplete={handleAnalysisComplete}
+      />
     </div>
   );
 };

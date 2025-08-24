@@ -41,6 +41,10 @@ const StrategyManagement = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingStrategy, setEditingStrategy] = useState(null);
   const [form] = Form.useForm();
+  // 添加立即执行加载状态
+  const [executingStrategies, setExecutingStrategies] = useState(new Set());
+  // 添加状态切换加载状态
+  const [togglingStrategies, setTogglingStrategies] = useState(new Set());
 
   // 获取设备列表
   const fetchDevices = async () => {
@@ -59,7 +63,16 @@ const StrategyManagement = () => {
       const data = await strategyAPI.getStrategies();
       setStrategies(data);
     } catch (error) {
-      message.error('获取策略列表失败');
+      console.error('获取策略列表失败:', error);
+      let errorMessage = '获取策略列表失败';
+      
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message && error.message.includes('Network Error')) {
+        errorMessage = '网络连接失败，请检查网络连接';
+      }
+      
+      message.error(`获取策略列表失败: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -104,7 +117,7 @@ const StrategyManagement = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      console.log('表单值:', values);
+      
       
       // 处理时间字段 - 直接使用北京时间
       const strategyData = {
@@ -114,17 +127,13 @@ const StrategyManagement = () => {
         end_time: values.end_time ? values.end_time.format('YYYY-MM-DDTHH:mm:ss') : null,
       };
       
-      console.log('发送的策略数据:', strategyData);
+      
       
       if (editingStrategy) {
-        console.log('更新策略:', editingStrategy.id);
-        const result = await strategyAPI.updateStrategy(editingStrategy.id, strategyData);
-        console.log('更新结果:', result);
+                  const result = await strategyAPI.updateStrategy(editingStrategy.id, strategyData);
         message.success('策略更新成功');
       } else {
-        console.log('创建策略');
-        const result = await strategyAPI.createStrategy(strategyData);
-        console.log('创建结果:', result);
+                  const result = await strategyAPI.createStrategy(strategyData);
         message.success('策略创建成功');
       }
       
@@ -132,8 +141,23 @@ const StrategyManagement = () => {
       fetchStrategies();
     } catch (error) {
       console.error('策略操作失败:', error);
-      console.error('错误详情:', error.response?.data);
-      message.error(`操作失败: ${error.response?.data?.detail || error.message}`);
+      
+      // 处理不同类型的错误
+      let errorMessage = '操作失败';
+      
+      if (error.response?.data?.detail) {
+        // 服务器返回的具体错误信息
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        // 网络错误或其他错误
+        if (error.message.includes('Network Error') || error.message.includes('fetch')) {
+          errorMessage = '网络连接失败，请检查网络连接';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      message.error(`操作失败: ${errorMessage}`);
     }
   };
 
@@ -144,23 +168,54 @@ const StrategyManagement = () => {
       message.success('策略删除成功');
       fetchStrategies();
     } catch (error) {
-      message.error('删除失败');
+      console.error('删除策略失败:', error);
+      let errorMessage = '删除失败';
+      
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message && error.message.includes('Network Error')) {
+        errorMessage = '网络连接失败，请检查网络连接';
+      }
+      
+      message.error(`删除失败: ${errorMessage}`);
     }
   };
 
   // 切换策略状态
   const toggleStatus = async (strategyId) => {
+    // 设置切换状态
+    setTogglingStrategies(prev => new Set(prev).add(strategyId));
+    
     try {
       await strategyAPI.toggleStrategyStatus(strategyId);
       message.success('状态切换成功');
       fetchStrategies();
     } catch (error) {
-      message.error('状态切换失败');
+      console.error('切换策略状态失败:', error);
+      let errorMessage = '状态切换失败';
+      
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message && error.message.includes('Network Error')) {
+        errorMessage = '网络连接失败，请检查网络连接';
+      }
+      
+      message.error(`状态切换失败: ${errorMessage}`);
+    } finally {
+      // 清除切换状态
+      setTogglingStrategies(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(strategyId);
+        return newSet;
+      });
     }
   };
 
   // 立即执行策略（不影响调度）
   const executeStrategyNow = async (strategyId) => {
+    // 设置执行状态
+    setExecutingStrategies(prev => new Set(prev).add(strategyId));
+    
     try {
       const result = await strategyAPI.executeStrategyNow(strategyId);
       if (result.success) {
@@ -170,7 +225,23 @@ const StrategyManagement = () => {
       }
       fetchStrategies();
     } catch (error) {
-      message.error('策略执行失败');
+      console.error('策略执行失败:', error);
+      let errorMessage = '策略执行失败';
+      
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message && error.message.includes('Network Error')) {
+        errorMessage = '网络连接失败，请检查网络连接';
+      }
+      
+      message.error(`策略执行失败: ${errorMessage}`);
+    } finally {
+      // 清除执行状态
+      setExecutingStrategies(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(strategyId);
+        return newSet;
+      });
     }
   };
 
@@ -180,6 +251,7 @@ const StrategyManagement = () => {
       title: '策略名称',
       dataIndex: 'name',
       key: 'name',
+      width: 150,
       render: (text, record) => (
         <div>
           <div style={{ fontWeight: 'bold' }}>{text}</div>
@@ -193,12 +265,14 @@ const StrategyManagement = () => {
       title: '设备',
       dataIndex: 'device',
       key: 'device',
+      width: 120,
       render: (device) => device?.name || '-',
     },
     {
       title: '策略类型',
       dataIndex: 'strategy_type',
       key: 'strategy_type',
+      width: 100,
       render: (type) => {
         const typeMap = {
           'one-time': { color: 'blue', text: '一次性' },
@@ -212,6 +286,7 @@ const StrategyManagement = () => {
       title: '备份类型',
       dataIndex: 'backup_type',
       key: 'backup_type',
+      width: 100,
       render: (type) => {
         const typeMap = {
           'running-config': '运行配置',
@@ -227,6 +302,7 @@ const StrategyManagement = () => {
       title: '状态',
       dataIndex: 'is_active',
       key: 'is_active',
+      width: 80,
       render: (isActive) => (
         <Tag color={isActive ? 'success' : 'default'}>
           {isActive ? '启用' : '禁用'}
@@ -237,6 +313,7 @@ const StrategyManagement = () => {
       title: '下次执行',
       dataIndex: 'next_execution',
       key: 'next_execution',
+      width: 140,
       render: (time) => {
         if (!time) return '-';
         return dayjs(time).format('YYYY-MM-DD HH:mm:ss');
@@ -246,6 +323,7 @@ const StrategyManagement = () => {
       title: '最后执行',
       dataIndex: 'last_execution',
       key: 'last_execution',
+      width: 140,
       render: (time) => {
         if (!time) return '-';
         return dayjs(time).format('YYYY-MM-DD HH:mm:ss');
@@ -254,18 +332,22 @@ const StrategyManagement = () => {
     {
       title: '操作',
       key: 'actions',
+      width: 180,
+      fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button
             size="small"
             icon={record.is_active ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
             onClick={() => toggleStatus(record.id)}
+            loading={togglingStrategies.has(record.id)}
           >
             {record.is_active ? '禁用' : '启用'}
           </Button>
           <Button
             size="small"
             icon={<ThunderboltOutlined />}
+            loading={executingStrategies.has(record.id)}
             onClick={() => executeStrategyNow(record.id)}
             disabled={!record.is_active}
             type="primary"
@@ -316,10 +398,12 @@ const StrategyManagement = () => {
       </div>
 
       <Table
+        className="strategy-table"
         columns={columns}
         dataSource={strategies}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 1200 }}
         pagination={{
           showSizeChanger: true,
           showQuickJumper: true,

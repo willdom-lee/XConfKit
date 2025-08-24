@@ -9,7 +9,7 @@ from ..schemas import (
     BackupStrategyWithDevice,
     ResponseModel
 )
-from ..models import BackupStrategy
+from ..models import Strategy
 from ..services.strategy_service import StrategyService
 
 router = APIRouter(prefix="/api/strategies", tags=["备份策略"])

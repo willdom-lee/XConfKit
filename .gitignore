@@ -54,6 +54,7 @@ logs/
 
 # Backup files
 data/backups/
+backups/
 *.bak
 *.backup
 
@@ -90,3 +91,8 @@ ssh_host_key*
 # Test files
 test_*.py
 debug_*.py
+
+# PID files
+*.pid
+.backend.pid
+.frontend.pid

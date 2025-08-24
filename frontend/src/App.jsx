@@ -6,12 +6,18 @@ import {
   CloudUploadOutlined,
   SettingOutlined,
   ClockCircleOutlined,
+  RobotOutlined,
+  DashboardOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
+import Dashboard from './components/Dashboard';
 import DeviceList from './components/DeviceList';
 import BackupManagement from './components/BackupManagement';
 import StrategyManagement from './components/StrategyManagement';
+import SystemConfig from './components/SystemConfig';
+import AIConfigAnalysis from './components/AIConfigAnalysis';
+import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
 const { Header, Sider, Content } = Layout;
@@ -23,6 +29,11 @@ function App() {
   const menuItems = [
     {
       key: '/',
+      icon: <DashboardOutlined />,
+      label: '仪表板',
+    },
+    {
+      key: '/devices',
       icon: <DesktopOutlined />,
       label: '设备管理',
     },
@@ -35,6 +46,16 @@ function App() {
       key: '/strategies',
       icon: <ClockCircleOutlined />,
       label: '备份策略',
+    },
+    {
+      key: '/analysis',
+      icon: <RobotOutlined />,
+      label: 'AI分析',
+    },
+    {
+      key: '/config',
+      icon: <SettingOutlined />,
+      label: '系统配置',
     },
   ];
 
@@ -83,11 +104,16 @@ function App() {
             borderRadius: '8px',
             marginTop: '24px'
           }}>
-            <Routes>
-              <Route path="/" element={<DeviceList />} />
-              <Route path="/backups" element={<BackupManagement />} />
-              <Route path="/strategies" element={<StrategyManagement />} />
-            </Routes>
+            <ErrorBoundary>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/devices" element={<DeviceList />} />
+                <Route path="/backups" element={<BackupManagement />} />
+                <Route path="/strategies" element={<StrategyManagement />} />
+                <Route path="/analysis" element={<AIConfigAnalysis />} />
+                <Route path="/config" element={<SystemConfig />} />
+              </Routes>
+            </ErrorBoundary>
           </Content>
         </Layout>
       </Layout>

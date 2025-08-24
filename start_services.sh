@@ -9,7 +9,7 @@ NC='\033[0m' # No Color
 
 # 配置
 BACKEND_PORT=8000
-FRONTEND_PORT=5173
+FRONTEND_PORT=5174
 MAX_RETRIES=3
 WAIT_TIME=5
 
@@ -84,7 +84,7 @@ stop_existing_services() {
     echo -e "${BLUE}停止现有服务...${NC}"
     
     # 停止后端服务
-    local backend_pids=$(pgrep -f "python3 start_backend.py" 2>/dev/null)
+    local backend_pids=$(pgrep -f "python start_backend.py" 2>/dev/null)
     if [ ! -z "$backend_pids" ]; then
         echo -e "${YELLOW}发现运行中的后端进程: $backend_pids${NC}"
         for pid in $backend_pids; do
@@ -145,7 +145,7 @@ start_backend() {
     fi
     
     # 启动后端
-    python3 start_backend.py > backend.log 2>&1 &
+    python start_backend.py > backend.log 2>&1 &
     BACKEND_PID=$!
     
     # 等待启动
