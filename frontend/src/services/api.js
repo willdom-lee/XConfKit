@@ -130,10 +130,9 @@ export const configAPI = {
         configs[category.category] = category.configs; // 保持原始数组格式
       });
       
-      console.log('API返回的配置数据:', configs);
       return configs;
     } catch (error) {
-      console.error('获取配置失败:', error);
+      // 获取配置失败
       throw error;
     }
   },

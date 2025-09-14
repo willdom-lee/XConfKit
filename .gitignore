@@ -64,6 +64,8 @@ backups/
 .env.development.local
 .env.test.local
 .env.production.local
+# Keep .env.example for reference
+!.env.example
 
 # Node modules (if any)
 node_modules/
@@ -91,6 +93,8 @@ ssh_host_key*
 # Test files
 test_*.py
 debug_*.py
+test_*.html
+running-config_*.txt
 
 # PID files
 *.pid

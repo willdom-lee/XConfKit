@@ -277,7 +277,7 @@ describe('XConfKit 前端组件测试', () => {
         name: 'New-Device',
         ip_address: '192.168.1.200',
         username: 'admin',
-        password: 'admin123',
+        password: 'test_password',
         protocol: 'ssh',
       };
 

@@ -389,7 +389,7 @@ const CLIConnection = ({ visible, onClose, device }) => {
         method: 'DELETE',
       });
     } catch (error) {
-      console.error('关闭SSH会话失败:', error);
+      // 关闭SSH会话失败
     }
     
     setIsConnected(false);

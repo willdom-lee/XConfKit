@@ -63,7 +63,7 @@ const StrategyManagement = () => {
       const data = await strategyAPI.getStrategies();
       setStrategies(data);
     } catch (error) {
-      console.error('获取策略列表失败:', error);
+      // 获取策略列表失败
       let errorMessage = '获取策略列表失败';
       
       if (error.response?.data?.detail) {
@@ -140,7 +140,7 @@ const StrategyManagement = () => {
       setModalVisible(false);
       fetchStrategies();
     } catch (error) {
-      console.error('策略操作失败:', error);
+      // 策略操作失败
       
       // 处理不同类型的错误
       let errorMessage = '操作失败';
@@ -168,7 +168,7 @@ const StrategyManagement = () => {
       message.success('策略删除成功');
       fetchStrategies();
     } catch (error) {
-      console.error('删除策略失败:', error);
+      // 删除策略失败
       let errorMessage = '删除失败';
       
       if (error.response?.data?.detail) {
@@ -191,7 +191,7 @@ const StrategyManagement = () => {
       message.success('状态切换成功');
       fetchStrategies();
     } catch (error) {
-      console.error('切换策略状态失败:', error);
+      // 切换策略状态失败
       let errorMessage = '状态切换失败';
       
       if (error.response?.data?.detail) {
@@ -225,7 +225,7 @@ const StrategyManagement = () => {
       }
       fetchStrategies();
     } catch (error) {
-      console.error('策略执行失败:', error);
+      // 策略执行失败
       let errorMessage = '策略执行失败';
       
       if (error.response?.data?.detail) {

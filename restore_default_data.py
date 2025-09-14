@@ -152,7 +152,7 @@ def restore_default_data():
                     INSERT INTO devices 
                     (name, ip_address, username, password, protocol, description, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''', ('示例设备', '192.168.1.1', 'admin', 'password', 'ssh', '这是一个示例设备，请根据实际情况修改', datetime.now(), datetime.now()))
+                ''', ('示例设备', '192.168.1.1', 'admin', 'CHANGE_ME', 'ssh', '这是一个示例设备，请根据实际情况修改', datetime.now(), datetime.now()))
         
         # 5. 添加示例备份策略（可选）
         print("📋 添加示例备份策略...")

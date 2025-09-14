@@ -63,17 +63,17 @@ def restore_from_backup():
                         device_name = 'H3C-Switch-01'
                         ip_address = '192.168.1.10'
                         username = 'admin'
-                        password = 'admin123'  # 默认密码，建议在生产环境中修改
+                        password = 'CHANGE_ME'  # 请在生产环境中修改为实际密码
                     elif device_id == '2':
                         device_name = 'H3C-Switch-02'
                         ip_address = '192.168.1.11'
                         username = 'admin'
-                        password = 'admin123'  # 默认密码，建议在生产环境中修改
+                        password = 'CHANGE_ME'  # 请在生产环境中修改为实际密码
                     else:
                         device_name = f'Device-{device_id}'
                         ip_address = f'192.168.1.{10 + int(device_id)}'
                         username = 'admin'
-                        password = 'admin123'  # 默认密码，建议在生产环境中修改
+                        password = 'CHANGE_ME'  # 请在生产环境中修改为实际密码
                     
                     cursor.execute('''
                         INSERT INTO devices 

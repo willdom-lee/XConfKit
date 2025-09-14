@@ -84,14 +84,12 @@ const SystemConfig = () => {
           formData.ai_enable_cache = aiConfigData.enable_cache !== false;
         }
         
-        console.log('最终表单数据:', formData);
         form.setFieldsValue(formData);
-        console.log('表单值设置完成');
       }, 100);
       
     } catch (error) {
       message.error('加载配置失败');
-      console.error('加载配置失败:', error);
+      // 配置加载失败
     } finally {
       setLoading(false);
     }
@@ -104,7 +102,7 @@ const SystemConfig = () => {
       
       // 获取表单数据
       const formData = form.getFieldsValue();
-      console.log('保存配置 - 表单数据:', formData);
+      // 保存配置数据
       
       // 分离AI配置
       const aiConfigData = {
@@ -122,17 +120,12 @@ const SystemConfig = () => {
       await configAPI.updateAIConfig(aiConfigData);
       
       message.success('AI配置保存成功');
-      console.log('配置保存完成，准备重新加载配置');
       // 延迟重新加载，确保后端保存完成
       setTimeout(() => {
-        console.log('开始重新加载配置');
         loadConfigs();
       }, 500);
     } catch (error) {
-      console.error('保存配置失败:', error);
-      console.error('错误详情:', {
-        message: error.message,
-        response: error.response?.data,
+      // 保存配置失败
         status: error.response?.status
       });
       
@@ -285,7 +278,7 @@ const SystemConfig = () => {
         message.error(`AI配置测试失败: ${errorMessage}`);
       }
     } catch (error) {
-      console.error('AI配置测试失败:', error);
+      // AI配置测试失败
       
       // 提供更具体的错误信息
       let errorMessage = 'AI配置测试失败，请检查配置参数';

@@ -135,7 +135,7 @@ describe('DeviceList Component', () => {
       ip_address: '192.168.1.1',
       protocol: 'ssh',
       username: 'admin',
-      password: 'password123',
+      password: 'test_password',
       port: 22,
       description: '新设备描述',
       created_at: '2023-01-01T00:00:00Z',
@@ -172,7 +172,7 @@ describe('DeviceList Component', () => {
         ip_address: '192.168.1.1',
         protocol: 'ssh',
         username: 'admin',
-        password: 'password123',
+        password: 'test_password',
         port: 22,
         description: undefined,
       });

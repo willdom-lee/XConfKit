@@ -76,7 +76,7 @@ const QuickAnalysisModal = ({ visible, onCancel, device, backup, onAnalysisCompl
         message.error(`分析失败: ${errorMessage}`);
       }
     } catch (error) {
-      console.error('AI分析错误:', error);
+      // AI分析错误
       message.error('分析失败，请检查AI配置');
     } finally {
       setAnalyzing(false);

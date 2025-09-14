@@ -83,7 +83,7 @@ class IntegrationTest:
             "ip_address": "192.168.1.100",
             "protocol": "ssh",
             "username": "admin",
-            "password": "password123",
+            "password": "test_password",
             "port": 22,
             "description": "集成测试用设备"
         }
@@ -192,7 +192,7 @@ class IntegrationTest:
             "ip_address": "192.168.1.200",
             "protocol": "ssh",
             "username": "admin",
-            "password": "password123",
+            "password": "test_password",
             "port": 22
         }
         

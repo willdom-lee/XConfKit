@@ -43,7 +43,7 @@ const Dashboard = () => {
           }
         }));
       } catch (error) {
-        console.error('获取系统运行时间失败:', error);
+        // 获取系统运行时间失败
       }
     }, 1000);
 
@@ -98,7 +98,7 @@ const Dashboard = () => {
         }
       });
     } catch (error) {
-      console.error('获取Dashboard数据失败:', error);
+      // 获取Dashboard数据失败
     } finally {
       setLoading(false);
     }

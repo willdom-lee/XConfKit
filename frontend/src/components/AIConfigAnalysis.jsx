@@ -132,7 +132,7 @@ const AIConfigAnalysis = () => {
       const config = await configAPI.getAIConfig();
       return config;
     } catch (error) {
-      console.error('获取AI配置失败:', error);
+      // 获取AI配置失败
       return null;
     }
   };
@@ -164,7 +164,7 @@ const AIConfigAnalysis = () => {
         message.error(result.message || '删除失败');
       }
     } catch (error) {
-      console.error('删除分析记录失败:', error);
+      // 删除分析记录失败
       message.error('删除失败，请稍后重试');
     }
   };
@@ -180,7 +180,7 @@ const AIConfigAnalysis = () => {
         message.error(result.message || '清空失败');
       }
     } catch (error) {
-      console.error('清空分析记录失败:', error);
+      // 清空分析记录失败
       message.error('清空失败，请稍后重试');
     }
   };

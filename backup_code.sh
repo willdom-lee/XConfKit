@@ -63,8 +63,20 @@ for pattern in "${EXCLUDE_PATTERNS[@]}"; do
     EXCLUDE_ARGS="$EXCLUDE_ARGS -x '$pattern'"
 done
 
-# 创建压缩包
-eval "zip -r '$ZIP_BACKUP_FILE' . $EXCLUDE_ARGS"
+# 创建压缩包，明确排除backups目录
+zip -r "$ZIP_BACKUP_FILE" . \
+    -x "node_modules/*" \
+    -x "__pycache__/*" \
+    -x "*.pyc" \
+    -x "*.log" \
+    -x "*.db" \
+    -x "*.pid" \
+    -x ".DS_Store" \
+    -x "data/backups/*" \
+    -x ".venv/*" \
+    -x "venv/*" \
+    -x "backups/*" \
+    -x ".git/*"
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}   压缩包备份完成: $ZIP_BACKUP_FILE${NC}"
