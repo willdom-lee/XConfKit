@@ -1,6 +1,17 @@
 # XConfKit - 网络设备配置备份管理系统
 
+<div align="center">
+
+![XConfKit Logo](logo.png)
+
 一个功能完整的网络设备配置备份管理系统，支持SSH连接、自动备份、策略调度等功能。
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.8+-green.svg)](https://python.org)
+[![Node.js](https://img.shields.io/badge/node.js-16+-orange.svg)](https://nodejs.org)
+[![Status](https://img.shields.io/badge/status-demo-yellow.svg)](README.md)
+
+</div>
 
 ## ⚠️ 重要说明
 
@@ -60,6 +71,11 @@
 **📋 详细免责声明请查看**: [DISCLAIMER.md](DISCLAIMER.md)
 
 ## 🚀 快速开始
+
+### 系统概览
+<div align="center">
+<img src="docs/images/index.png" alt="XConfKit系统概览" width="800"/>
+</div>
 
 ### 1. 克隆项目
 ```bash
@@ -123,6 +139,30 @@ cd XConfKit
 - **API文档**: http://localhost:8000/docs
 
 ## 📋 功能特性
+
+### 系统界面展示
+
+<div align="center">
+
+#### 🏠 系统主页
+![系统主页](docs/images/index.png)
+
+#### 🔧 设备管理
+![设备管理](docs/images/devices.png)
+
+#### 💾 备份管理
+![备份管理](docs/images/backups.png)
+
+#### ⚙️ 备份策略
+![备份策略](docs/images/strategies.png)
+
+#### 🤖 AI配置分析
+![AI配置分析](docs/images/analysis.png)
+
+#### 🔧 系统配置
+![系统配置](docs/images/config.png)
+
+</div>
 
 ### 核心功能
 - ✅ **设备管理**: SSH连接支持，设备增删改查，连接测试
