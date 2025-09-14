@@ -100,3 +100,21 @@ running-config_*.txt
 *.pid
 .backend.pid
 .frontend.pid
+
+# GitHub templates (keep them)
+!.github/
+!.github/ISSUE_TEMPLATE/
+!.github/pull_request_template.md
+
+# Keep important config files
+!.env.example
+!requirements.txt
+!package.json
+!package-lock.json
+
+# Keep documentation
+!README.md
+!INSTALL.md
+!LICENSE
+!CONTRIBUTING.md
+!CODE_OF_CONDUCT.md
