@@ -17,6 +17,15 @@ echo -e "${BLUE}==========================================${NC}"
 echo -e "${BLUE}XConfKit 服务启动脚本${NC}"
 echo -e "${BLUE}==========================================${NC}"
 
+# 免责声明提示
+echo -e "${RED}⚠️  重要安全警告 ⚠️${NC}"
+echo -e "${YELLOW}本软件为演示版本，仅供学习和研究使用${NC}"
+echo -e "${YELLOW}使用前请仔细阅读 DISCLAIMER.md 免责声明${NC}"
+echo -e "${YELLOW}建议仅在隔离的测试环境中使用${NC}"
+echo -e "${YELLOW}作者不承担任何安全风险和责任${NC}"
+echo -e "${BLUE}==========================================${NC}"
+echo ""
+
 # 检查是否在正确的目录
 if [ ! -f "start_backend.py" ]; then
     echo -e "${RED}错误: 请在项目根目录运行此脚本${NC}"

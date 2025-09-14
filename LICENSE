@@ -19,3 +19,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+ADDITIONAL DISCLAIMER FOR NETWORK SECURITY SOFTWARE:
+
+This software is designed for network device configuration backup and management.
+It may connect to network devices via SSH and perform configuration operations.
+
+IMPORTANT SECURITY WARNING:
+- This software is provided for educational and research purposes only
+- It has NOT been thoroughly tested for security vulnerabilities
+- It may contain bugs that could cause network device failures or security breaches
+- Use at your own risk and only in isolated test environments
+- Do NOT use in production environments or on critical network infrastructure
+- The authors assume NO responsibility for any network security incidents, 
+  data breaches, or network failures that may result from using this software
+- Users are solely responsible for ensuring compliance with applicable 
+  cybersecurity laws and regulations
+- Professional network administrators should review and test thoroughly 
+  before any deployment
+
+By using this software, you acknowledge and accept all risks associated with 
+network device management and configuration backup operations.

@@ -126,9 +126,6 @@ const SystemConfig = () => {
       }, 500);
     } catch (error) {
       // 保存配置失败
-        status: error.response?.status
-      });
-      
       let errorMessage = '保存配置失败';
       
       if (error.response?.data?.detail) {
